@@ -15,8 +15,8 @@ exports.Signup=async(req,res)=>{
 
         newUser.save();
 
-        res.send("created");
-    }catch{
+        res.status(200).send("created")
+    }catch{ 
         res.status(400);
     }
 }
