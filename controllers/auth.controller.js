@@ -1,12 +1,41 @@
 const User=require("../models/user.model");
 
+const { body, validationResult } = require('express-validator');
 
 const bcrypt=require("bcrypt");
 
 const jwt=require("jsonwebtoken");
 
 exports.Signup=async(req,res)=>{
-    const {username,password,email}=req.body;
+    const {username,password,confirmPassword,email}=req.body;
+
+    const existingEmail=await User.findOne({email:email});
+
+    console.log(existingEmail)
+
+    if(existingEmail!==null){
+        return res.status(400).send("Email in use")
+    }
+
+    if(confirmPassword!==password){
+        return res.status(400).send("Passwords do not match")
+    }
+
+    const errors = validationResult(req);
+
+    if(!errors.isEmpty()){
+        if(errors.errors[0].param=="email"){
+            return res.status(400).send("Invalid email");
+        }
+
+        if(errors.errors[0].param=="username"){
+            return res.status(400).send("Username must be longer than 2 characters");
+        }
+        
+        if(errors.errors[0].param=="password"){
+            return res.status(400).send("Password must be longer than 6 characters");
+        }
+    }   
 
     try{
         const hashPassword=await bcrypt.hash(password , 10);
@@ -22,15 +51,15 @@ exports.Signup=async(req,res)=>{
 }
 
 
-exports.Login=async(req,res,next)=>{
-    const {username,password,email}=req.body;
+exports.Login=async(req,res)=>{
+    const {password,email}=req.body;
 
     try{
 
         const existingUser=await User.find({email:email});
 
         if(existingUser==""){
-            return res.status(404).send("couldnt find user");
+            return res.status(404).send("Couldnt find user");
         }
 
         const isValidPassword=await bcrypt.compare(password , existingUser[0].password);
@@ -45,11 +74,31 @@ exports.Login=async(req,res,next)=>{
             {expiresIn:"3h"},
         );
 
-        req.headers.token=token;
-
-        next();
+        res.status(200).send(token)
 
     }catch(err){
         res.send(err);
+    }
+}
+
+exports.verifyToken=async(req,res)=>{
+    if(req.headers.token==""){
+        return res.status(400).send("Token required");
+    }
+
+    const token=req.headers.token;
+
+    try{
+        jwt.verify(
+            token,
+            process.env.SECRET_KEY,
+            (error , item)=>{
+                if(!error){
+                    res.send(item);
+                }
+            }
+        )
+    }catch(error){
+        res.status(401);
     }
 }
