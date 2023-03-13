@@ -11,8 +11,6 @@ exports.Signup=async(req,res)=>{
 
     const existingEmail=await User.findOne({email:email});
 
-    console.log(existingEmail)
-
     if(existingEmail!==null){
         return res.status(400).send("Email in use")
     }
@@ -65,7 +63,7 @@ exports.Login=async(req,res)=>{
         const isValidPassword=await bcrypt.compare(password , existingUser[0].password);
 
         if(!isValidPassword){
-            return res.status(400).send("username or email wrong");
+            return res.status(400).send("Password wrong");
         }
 
         const token=jwt.sign(
